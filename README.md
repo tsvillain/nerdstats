@@ -88,7 +88,7 @@ Data flows one way:
 3. `StatsCoordinator` runs a single timer on the chosen interval and calls
    `SnapshotSampler` on a background queue. While the dashboard is closed it samples only
    what the enabled menu bar items need (for example CPU ticks and the processor
-   temperature sensors, plus GPU, disk or battery when those items are on) and updates
+   temperature sensors, plus GPU, memory, disk or battery when those items are on) and updates
    only the menu bar items. Opening the dashboard triggers a full sample and keeps
    everything refreshing until it closes.
 4. SwiftUI views read the published snapshot and history; they never touch system APIs.
