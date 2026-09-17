@@ -20,6 +20,7 @@ struct NerdStatsTrafficMonitor {
     uint64_t nextSourceID;
     void (*destroyManager)(NStatManagerRef);
     int (*queryCounts)(NStatManagerRef, void (^)(void));
+    int (*queryDescriptions)(NStatManagerRef, void (^)(void));
 };
 
 static void *NerdStatsFrameworkHandle(void) {
@@ -40,12 +41,12 @@ NerdStatsTrafficMonitor *NerdStatsTrafficMonitorCreate(void) {
     void (*addAllUDP)(NStatManagerRef, int, int) = dlsym(handle, "NStatManagerAddAllUDPWithFilter");
     void (*setDescriptionBlock)(NStatSourceRef, void (^)(CFDictionaryRef)) = dlsym(handle, "NStatSourceSetDescriptionBlock");
     void (*setCountsBlock)(NStatSourceRef, void (^)(CFDictionaryRef)) = dlsym(handle, "NStatSourceSetCountsBlock");
-    void (*queryDescription)(NStatSourceRef) = dlsym(handle, "NStatSourceQueryDescription");
     void (*setRemovedBlock)(NStatSourceRef, void (^)(void)) = dlsym(handle, "NStatSourceSetRemovedBlock");
     void (*destroyManager)(NStatManagerRef) = dlsym(handle, "NStatManagerDestroy");
     int (*queryCounts)(NStatManagerRef, void (^)(void)) = dlsym(handle, "NStatManagerQueryAllSources");
-    if (!create || !addAllTCP || !addAllUDP || !setDescriptionBlock || !setCountsBlock || !queryDescription
-        || !setRemovedBlock || !destroyManager || !queryCounts) {
+    int (*queryDescriptions)(NStatManagerRef, void (^)(void)) = dlsym(handle, "NStatManagerQueryAllSourcesDescriptions");
+    if (!create || !addAllTCP || !addAllUDP || !setDescriptionBlock || !setCountsBlock
+        || !setRemovedBlock || !destroyManager || !queryCounts || !queryDescriptions) {
         return NULL;
     }
 
@@ -56,6 +57,7 @@ NerdStatsTrafficMonitor *NerdStatsTrafficMonitorCreate(void) {
     monitor->counts = CFDictionaryCreateMutable(NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
     monitor->destroyManager = destroyManager;
     monitor->queryCounts = queryCounts;
+    monitor->queryDescriptions = queryDescriptions;
 
     // Callbacks run on monitor->queue, so the dictionary needs no lock.
     monitor->manager = create(kCFAllocatorDefault, monitor->queue, ^(NStatSourceRef source, void *unused) {
@@ -75,9 +77,6 @@ NerdStatsTrafficMonitor *NerdStatsTrafficMonitorCreate(void) {
             CFRelease(key);
         });
         CFRelease(key);
-        // A socket's process and addresses never change, so its description is fetched once;
-        // each query afterwards only refreshes the byte counts.
-        queryDescription(source);
     });
     if (!monitor->manager) {
         CFRelease(monitor->descriptions);
@@ -119,13 +118,22 @@ static CFDataRef _Nullable NerdStatsData(CFDictionaryRef dictionary, CFStringRef
 
 bool NerdStatsTrafficMonitorQuery(NerdStatsTrafficMonitor *monitor, double timeoutSeconds,
                                   void *context, NerdStatsTrafficVisitor visitor) {
-    dispatch_semaphore_t done = dispatch_semaphore_create(0);
-    dispatch_retain(done); // Released by the completion block, which may outlive a timeout.
-    monitor->queryCounts(monitor->manager, ^{
-        dispatch_semaphore_signal(done);
+    // Descriptions are fetched on every query too: a socket can be reported before it is bound
+    // or connected, and its addresses are only known once that happens.
+    dispatch_group_t done = dispatch_group_create();
+    dispatch_retain(done); // Released by the completion blocks, which may outlive a timeout.
+    dispatch_retain(done);
+    dispatch_group_enter(done);
+    dispatch_group_enter(done);
+    monitor->queryDescriptions(monitor->manager, ^{
+        dispatch_group_leave(done);
         dispatch_release(done);
     });
-    bool finished = dispatch_semaphore_wait(done, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeoutSeconds * NSEC_PER_SEC))) == 0;
+    monitor->queryCounts(monitor->manager, ^{
+        dispatch_group_leave(done);
+        dispatch_release(done);
+    });
+    bool finished = dispatch_group_wait(done, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeoutSeconds * NSEC_PER_SEC))) == 0;
     dispatch_release(done);
 
     dispatch_sync(monitor->queue, ^{

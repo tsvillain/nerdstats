@@ -104,16 +104,30 @@ final class TrafficRatesTests: XCTestCase {
             TrafficSample(sourceID: 1, pid: 10, key: key, receivedBytes: 5_000, sentBytes: 300),
             TrafficSample(sourceID: 2, pid: 10, key: otherKey, receivedBytes: 200, sentBytes: 0),
         ], at: 2)
-        XCTAssertEqual(second.byConnection[key], TrafficRate(download: 2_000, upload: 100))
-        XCTAssertEqual(second.byConnection[otherKey], TrafficRate(download: 100, upload: 0))
+        XCTAssertEqual(second.byConnection[10]?[key], TrafficRate(download: 2_000, upload: 100))
+        XCTAssertEqual(second.byConnection[10]?[otherKey], TrafficRate(download: 100, upload: 0))
         XCTAssertEqual(second.byProcess[10], TrafficRate(download: 2_100, upload: 100))
+    }
+
+    func testSameEndpointsInDifferentProcessesStaySeparate() {
+        var rates = TrafficRates()
+        rates.update([
+            TrafficSample(sourceID: 1, pid: 10, key: otherKey, receivedBytes: 0, sentBytes: 0),
+            TrafficSample(sourceID: 2, pid: 20, key: otherKey, receivedBytes: 0, sentBytes: 0),
+        ], at: 0)
+        let result = rates.update([
+            TrafficSample(sourceID: 1, pid: 10, key: otherKey, receivedBytes: 100, sentBytes: 0),
+            TrafficSample(sourceID: 2, pid: 20, key: otherKey, receivedBytes: 0, sentBytes: 40),
+        ], at: 1)
+        XCTAssertEqual(result.byConnection[10]?[otherKey], TrafficRate(download: 100, upload: 0))
+        XCTAssertEqual(result.byConnection[20]?[otherKey], TrafficRate(download: 0, upload: 40))
     }
 
     func testNewSocketsAreBaselinedNotSpikes() {
         var rates = TrafficRates()
         rates.update([], at: 0)
         let result = rates.update([TrafficSample(sourceID: 7, pid: 3, key: key, receivedBytes: 9_000_000_000, sentBytes: 0)], at: 1)
-        XCTAssertNil(result.byConnection[key])
+        XCTAssertNil(result.byConnection[3]?[key])
         XCTAssertEqual(result.byProcess[3], nil)
     }
 
@@ -123,7 +137,7 @@ final class TrafficRatesTests: XCTestCase {
         XCTAssertTrue(rates.update([TrafficSample(sourceID: 1, pid: 1, key: key, receivedBytes: 200, sentBytes: 0)], at: 60)
             .byConnection.isEmpty)
         let reset = rates.update([TrafficSample(sourceID: 1, pid: 1, key: key, receivedBytes: 50, sentBytes: 0)], at: 61)
-        XCTAssertEqual(reset.byConnection[key], TrafficRate(download: 0, upload: 0), "a counter going backwards is not negative traffic")
+        XCTAssertEqual(reset.byConnection[1]?[key], TrafficRate(download: 0, upload: 0), "a counter going backwards is not negative traffic")
     }
 }
 

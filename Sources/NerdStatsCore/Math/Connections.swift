@@ -65,7 +65,7 @@ public struct TrafficRates: Sendable {
     }
 
     public mutating func update(_ samples: [TrafficSample], at time: TimeInterval)
-        -> (byConnection: [ConnectionKey: TrafficRate], byProcess: [Int32: TrafficRate]) {
+        -> (byConnection: [Int32: [ConnectionKey: TrafficRate]], byProcess: [Int32: TrafficRate]) {
         let previous = lastBytes
         let previousTime = lastTime
         lastBytes = Dictionary(samples.map { ($0.sourceID, ($0.receivedBytes, $0.sentBytes)) }, uniquingKeysWith: { $1 })
@@ -75,7 +75,7 @@ public struct TrafficRates: Sendable {
         guard let previousTime, time > previousTime, time - previousTime <= maxInterval else { return ([:], [:]) }
         let elapsed = time - previousTime
 
-        var byConnection: [ConnectionKey: TrafficRate] = [:]
+        var byConnection: [Int32: [ConnectionKey: TrafficRate]] = [:]
         var byProcess: [Int32: TrafficRate] = [:]
         for sample in samples {
             // A socket first seen now may be long-lived (the monitor reports existing sockets
@@ -84,7 +84,7 @@ public struct TrafficRates: Sendable {
             let received = sample.receivedBytes >= before.received ? sample.receivedBytes - before.received : 0
             let sent = sample.sentBytes >= before.sent ? sample.sentBytes - before.sent : 0
             let rate = TrafficRate(download: Double(received) / elapsed, upload: Double(sent) / elapsed)
-            byConnection[sample.key, default: TrafficRate(download: 0, upload: 0)].add(rate)
+            byConnection[sample.pid, default: [:]][sample.key, default: TrafficRate(download: 0, upload: 0)].add(rate)
             byProcess[sample.pid, default: TrafficRate(download: 0, upload: 0)].add(rate)
         }
         return (byConnection, byProcess)

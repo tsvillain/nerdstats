@@ -38,7 +38,7 @@ public final class ConnectionSampler: Sampler {
                 if let address = connection.remote?.address {
                     connection.remoteHostName = resolver.cachedName(for: address)
                 }
-                if let rate = traffic?.byConnection[ConnectionKey(connection)] {
+                if let rate = traffic?.byConnection[pid]?[ConnectionKey(connection)] {
                     connection.downloadBytesPerSecond = rate.download
                     connection.uploadBytesPerSecond = rate.upload
                 }
@@ -66,7 +66,7 @@ public final class ConnectionSampler: Sampler {
         resolver.cancelPending()
     }
 
-    private func sampleTraffic() -> (byConnection: [ConnectionKey: TrafficRate], byProcess: [Int32: TrafficRate])? {
+    private func sampleTraffic() -> (byConnection: [Int32: [ConnectionKey: TrafficRate]], byProcess: [Int32: TrafficRate])? {
         if trafficMonitor == nil, !trafficUnavailable {
             trafficMonitor = NerdStatsTrafficMonitorCreate()
             trafficUnavailable = trafficMonitor == nil
