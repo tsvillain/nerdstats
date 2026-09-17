@@ -2,7 +2,7 @@
 
 APP := build/NerdStats.app
 
-.PHONY: build debug run dump test clean
+.PHONY: build debug run dump test dmg clean
 
 ## build: universal release .app bundle at build/NerdStats.app
 build:
@@ -24,6 +24,10 @@ dump:
 ## test: run unit tests (no special hardware needed)
 test:
 	swift test
+
+## dmg: drag-to-install build/NerdStats-<version>.dmg (VERSION=x.y.z to override)
+dmg:
+	scripts/build-dmg.sh
 
 clean:
 	rm -rf .build build

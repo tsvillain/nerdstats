@@ -34,6 +34,23 @@ Quit stay reachable. CPU with usage and temperature is on by default. Settings a
 launch at login (on by default), the refresh interval (1, 2, 5
 or 10 seconds) and °C/°F.
 
+## Install
+
+1. Download `NerdStats-<version>.dmg` from the repository's
+   [Releases](../../releases) page (you need access to this repository).
+2. Open the DMG and drag **NerdStats** onto the **Applications** folder, then eject it.
+3. Open NerdStats from Applications. It appears in the menu bar, not the Dock.
+
+NerdStats is ad-hoc signed, not signed with an Apple Developer ID or notarized, so macOS
+blocks the first launch ("Apple could not verify NerdStats…"). Allow it once: click
+**Done** on the warning, open **System Settings > Privacy & Security**, click
+**Open Anyway** next to the NerdStats message and confirm. Advanced users can instead run
+`xattr -dr com.apple.quarantine /Applications/NerdStats.app`. The DMG includes these steps
+in `How to open NerdStats.txt`.
+
+NerdStats launches at login by default (toggle it in Settings). Keep it in
+`/Applications` so that keeps working.
+
 ## Build, run and test
 
 You need Xcode (or the Xcode command line tools) with Swift 5.9 or newer. Everything
@@ -45,6 +62,7 @@ make run     # build, then launch (restarting any running copy)
 make test    # unit tests; no special hardware needed
 make dump    # print every reading once to the terminal, handy for checking sensors
 make debug   # faster debug build of the app bundle
+make dmg     # drag-to-install disk image at build/NerdStats-<version>.dmg
 make clean
 ```
 
@@ -54,6 +72,22 @@ SwiftPM product for both architectures and wraps it in an `.app` bundle with
 locally; Developer ID signing and notarization are not set up yet.
 
 To open the code in Xcode, open `Package.swift`.
+
+## Releasing
+
+The version lives in [`Resources/Info.plist`](Resources/Info.plist)
+(`CFBundleShortVersionString`); `make build` and `make dmg` stamp it into both
+`CFBundleShortVersionString` and `CFBundleVersion`, and `VERSION=1.2.3` overrides it.
+
+```sh
+make dmg                                  # local check: build/NerdStats-<version>.dmg
+git tag v1.2.3 && git push origin v1.2.3  # CI release
+```
+
+Pushing a `vX.Y.Z` tag runs [`.github/workflows/release.yml`](.github/workflows/release.yml):
+it runs the tests, builds the DMG with the tag's version via
+[`scripts/build-dmg.sh`](scripts/build-dmg.sh) and creates a GitHub Release with the DMG
+attached.
 
 ## Architecture
 

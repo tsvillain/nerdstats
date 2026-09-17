@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run unit tests
+        run: make test
+
+      - name: Build DMG
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: make dmg
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" build/NerdStats-"${TAG#v}".dmg \
+            --title "NerdStats ${TAG#v}" \
+            --generate-notes \
+            --notes "Download NerdStats-${TAG#v}.dmg, open it and drag NerdStats to Applications. NerdStats is not signed with an Apple Developer ID, so on first launch allow it once in System Settings > Privacy & Security > Open Anyway (see \"How to open NerdStats.txt\" in the DMG)."
