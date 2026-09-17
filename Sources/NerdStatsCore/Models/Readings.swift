@@ -50,7 +50,21 @@ public struct ProcessUsage: Equatable, Sendable, Identifiable {
     public var cpu: Double
     /// Physical memory footprint in bytes.
     public var memoryBytes: UInt64
+    /// `nil` when it could not be read; such a process is treated as protected.
+    public var ownerUID: uid_t?
+    /// Microseconds since 1970; with `pid` it identifies the process across PID reuse.
+    public var startTime: UInt64?
     public var id: Int32 { pid }
+
+    public init(pid: Int32, name: String, cpu: Double, memoryBytes: UInt64,
+                ownerUID: uid_t? = nil, startTime: UInt64? = nil) {
+        self.pid = pid
+        self.name = name
+        self.cpu = cpu
+        self.memoryBytes = memoryBytes
+        self.ownerUID = ownerUID
+        self.startTime = startTime
+    }
 }
 
 public struct ProcessReading: Equatable, Sendable {

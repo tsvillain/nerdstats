@@ -13,9 +13,9 @@ Requires macOS 13 Ventura or later.
 | Section | Everyone sees | Nerd mode adds |
 | --- | --- | --- |
 | This Mac | Model, chip, memory, macOS version, uptime | Model identifier, architecture (Apple Silicon/Intel, Rosetta), physical/logical and P/E core counts, hostname |
-| Processor | Total usage with a 60-sample sparkline | User/system/idle split, 1/5/15-minute load averages, per-core bars, top processes by CPU |
+| Processor | Total usage with a 60-sample sparkline | User/system/idle split, 1/5/15-minute load averages, per-core bars, top processes by CPU (Quit or Force Quit your own) |
 | Graphics | GPU utilization with sparkline | Per-GPU utilization and memory in use |
-| Memory | Used vs. total, memory pressure | App/wired/compressed/cached/free, swap, top processes by memory |
+| Memory | Used vs. total, memory pressure | App/wired/compressed/cached/free, swap, top processes by memory (Quit or Force Quit your own) |
 | Storage | Free space per volume, read/write speed | Read/write sparklines, bytes read/written since boot |
 | Network | Connection type, download/upload speed | Local IPv4/IPv6, public IP (only when you click **Look up**), totals since boot |
 | Battery | Charge, charging state, time remaining, health, system power draw | Cycle count, capacity vs. design, temperature, voltage, battery power, adapter wattage |
@@ -69,6 +69,7 @@ Sources/
     Formatting/        Units and human-readable formatting
     MenuBar/           Pure menu bar item logic: settings migration, readouts, icons,
                        which subsystems to sample, dashboard section order
+    Processes/         Which processes may be stopped, and sending Quit/Force Quit signals
   NerdStats/           The app
     App/               Entry point, StatsCoordinator (the sampling schedule),
                        StatusItemController (menu bar items and dashboard popover), --dump
@@ -94,9 +95,9 @@ Data flows one way:
 4. SwiftUI views read the published snapshot and history; they never touch system APIs.
 
 Logic that can be tested without hardware (tick deltas, rates, battery parsing, SMC
-decoding, formatting, status thresholds, menu bar item decisions) lives in `Math/`,
-`Formatting/`, `MenuBar/` and small parser types such as `BatteryParser` and
-`GPUStatistics`, and is covered by the tests.
+decoding, formatting, status thresholds, menu bar item decisions, process stop
+permissions) lives in `Math/`, `Formatting/`, `MenuBar/`, `Processes/` and small parser
+types such as `BatteryParser` and `GPUStatistics`, and is covered by the tests.
 
 ## Where the data comes from
 
@@ -138,6 +139,10 @@ Some limits are imposed by macOS itself:
 
 - Without root, CPU and memory for processes owned by other users (such as system
   daemons) cannot be read, so top-process lists cover your own processes.
+- In Nerd mode each top process has a menu (also on right-click) to Quit (SIGTERM) or
+  Force Quit (SIGKILL) it after a confirmation dialog. Only processes owned by you can be
+  stopped, never with an admin prompt; processes of the system or other users,
+  `loginwindow` and NerdStats itself show a lock instead.
 - macOS rounds network byte counters to 1 KiB for ordinary apps, so very light traffic
   shows as steps of about 1 KB/s.
 - Which sensors exist depends on the Mac model. Run `make dump` to see what yours reports.
