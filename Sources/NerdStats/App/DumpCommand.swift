@@ -81,6 +81,17 @@ enum DumpFormatter {
             row("Totals", "\(Format.bytes(network.totalReceivedBytes)) received, \(Format.bytes(network.totalSentBytes)) sent")
         }
 
+        if let connections = snapshot.connections {
+            section("Connections (\(connections.connectionCount) sockets, \(connections.hiddenProcessCount) processes hidden)")
+            row("Per-connection speed", connections.trafficAvailable ? "available" : "unavailable")
+            for process in connections.processes.prefix(10) {
+                row("\(process.name) [\(process.pid)]", "↓ \(Format.rate(process.downloadBytesPerSecond)) ↑ \(Format.rate(process.uploadBytesPerSecond))")
+                for connection in process.connections.prefix(5) {
+                    lines.append("    " + ConnectionText.summary(connection))
+                }
+            }
+        }
+
         section("Battery & Power")
         if let power = snapshot.power {
             row("Charge", "\(Format.percent(power.chargeFraction)) charging=\(power.isCharging) pluggedIn=\(power.isPluggedIn)")

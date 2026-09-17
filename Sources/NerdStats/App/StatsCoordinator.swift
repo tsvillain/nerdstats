@@ -53,6 +53,9 @@ final class StatsCoordinator: ObservableObject {
         settings.$menuBarItems.dropFirst().removeDuplicates()
             .sink { [weak self] _ in DispatchQueue.main.async { self?.sampleNow() } }
             .store(in: &cancellables)
+        settings.$nerdMode.dropFirst().removeDuplicates()
+            .sink { [weak self] _ in DispatchQueue.main.async { self?.sampleNow() } }
+            .store(in: &cancellables)
         settings.$cpuMenuBarReadout.dropFirst().removeDuplicates()
             .sink { [weak self] _ in DispatchQueue.main.async { self?.sampleNow() } }
             .store(in: &cancellables)
@@ -96,7 +99,10 @@ final class StatsCoordinator: ObservableObject {
     }
 
     private var subsystemsToSample: Set<Subsystem> {
-        if isDashboardVisible { return Set(Subsystem.allCases) }
+        if isDashboardVisible {
+            // Listing every socket is only worth it while Nerd mode shows the connections.
+            return Set(Subsystem.allCases).subtracting(settings.nerdMode ? [] : [.connections])
+        }
         return MenuBarLayout.requiredSubsystems(enabled: settings.menuBarItems, cpuReadout: settings.cpuMenuBarReadout)
     }
 

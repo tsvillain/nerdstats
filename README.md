@@ -17,7 +17,7 @@ Requires macOS 13 Ventura or later.
 | Graphics | GPU utilization with sparkline | Per-GPU utilization and memory in use |
 | Memory | Used vs. total, memory pressure | App/wired/compressed/cached/free, swap, top processes by memory (Quit or Force Quit your own) |
 | Storage | Free space per volume, read/write speed | Read/write sparklines, bytes read/written since boot |
-| Network | Connection type, download/upload speed | Local IPv4/IPv6, public IP (only when you click **Look up**), totals since boot |
+| Network | Connection type, download/upload speed | Local IPv4/IPv6, public IP (only when you click **Look up**), totals since boot, live connections per app (host name, IP, port and service, protocol, TCP state, speed) with search |
 | Battery | Charge, charging state, time remaining, health, system power draw | Cycle count, capacity vs. design, temperature, voltage, battery power, adapter wattage |
 | Temperatures & Fans | Processor, graphics and battery temperature, fan speeds | Every individual sensor grouped by category, fan min/max RPM |
 
@@ -59,7 +59,8 @@ To open the code in Xcode, open `Package.swift`.
 
 ```
 Sources/
-  CNerdStatsPrivate/   C declarations for private IOKit APIs (HID sensors) and the SMC struct
+  CNerdStatsPrivate/   C declarations for private IOKit APIs (HID sensors), the SMC struct,
+                       and a small wrapper around the private NetworkStatistics framework
   NerdStatsCore/       All data collection and interpretation; no UI
     LowLevel/          sysctl, IORegistry, SMC and HID sensor access
     Sampling/          One sampler per subsystem + SnapshotSampler that combines them
@@ -82,8 +83,9 @@ Data flows one way:
 
 1. Each subsystem has a class conforming to `Sampler` (`CPUSampler`, `GPUSampler`,
    `MemorySampler`, `DiskSampler`, `NetworkSampler`, `PowerSampler`, `SensorSampler`,
-   `SystemInfoSampler`, plus `ProcessSampler` for top processes). Samplers keep whatever
-   state they need between calls, such as previous counters for computing rates.
+   `SystemInfoSampler`, plus `ProcessSampler` for top processes and
+   `ConnectionSampler` for per-app sockets). Samplers keep whatever state they need
+   between calls, such as previous counters for computing rates.
 2. `SnapshotSampler` owns one of each and refreshes a requested subset into a
    `SystemSnapshot`.
 3. `StatsCoordinator` runs a single timer on the chosen interval and calls
@@ -91,13 +93,14 @@ Data flows one way:
    what the enabled menu bar items need (for example CPU ticks and the processor
    temperature sensors, plus GPU, memory, disk or battery when those items are on) and updates
    only the menu bar items. Opening the dashboard triggers a full sample and keeps
-   everything refreshing until it closes.
+   everything refreshing until it closes; connections are included only in Nerd mode.
 4. SwiftUI views read the published snapshot and history; they never touch system APIs.
 
 Logic that can be tested without hardware (tick deltas, rates, battery parsing, SMC
 decoding, formatting, status thresholds, menu bar item decisions, process stop
-permissions) lives in `Math/`, `Formatting/`, `MenuBar/`, `Processes/` and small parser
-types such as `BatteryParser` and `GPUStatistics`, and is covered by the tests.
+permissions, socket address formatting and connection grouping) lives in `Math/`,
+`Formatting/`, `MenuBar/`, `Processes/` and small parser types such as `BatteryParser`
+and `GPUStatistics`, and is covered by the tests.
 
 ## Where the data comes from
 
@@ -111,6 +114,8 @@ types such as `BatteryParser` and `GPUStatistics`, and is covered by the tests.
 | Disk capacity | `URLResourceValues` volume keys | Yes |
 | Disk throughput | `IOBlockStorageDriver` → `Statistics` in the IORegistry | Undocumented registry keys |
 | Network | `NET_RT_IFLIST2` sysctl, `getifaddrs`, SystemConfiguration | Yes |
+| Connections per app | `proc_pidinfo` (`PROC_PIDLISTFDS`), `proc_pidfdinfo` sockets; `getnameinfo` for host names | Yes (libproc) |
+| Per-connection speed | `NetworkStatistics.framework`, loaded at runtime | **Private** |
 | Public IP | `https://api.ipify.org`, only when you click **Look up** | – |
 | Battery | `AppleSmartBattery` in the IORegistry, `IOPSCopyExternalPowerAdapterDetails` | Undocumented registry keys |
 | Temperatures (Apple Silicon) | `IOHIDEventSystemClient` temperature sensor services | **Private** |
@@ -128,6 +133,12 @@ interfaces as other well-known monitors:
   Controller through the `AppleSMC` IOKit user client.
 - **GPU, disk and battery statistics** come from IORegistry properties whose names are
   not documented and differ between vendors and macOS versions.
+- **Per-connection speed** comes from `NetworkStatistics.framework`, the private framework
+  behind `nettop`. It is loaded at runtime, so without it connections are still listed,
+  just without speeds. The sockets themselves are listed through libproc (as `lsof` does),
+  and host names come from reverse DNS lookups made in the background and cached.
+  Connections are only sampled while the dashboard is open in Nerd mode. NerdStats never
+  captures packets or reads what is sent, so it cannot show URLs, only hosts.
 
 The App Sandbox blocks opening IOKit user clients such as `AppleSMC` and restricts
 IORegistry and HID access, so NerdStats is distributed outside the Mac App Store and
@@ -138,7 +149,8 @@ reading is optional and the UI shows "unavailable" rather than crashing.
 Some limits are imposed by macOS itself:
 
 - Without root, CPU and memory for processes owned by other users (such as system
-  daemons) cannot be read, so top-process lists cover your own processes.
+  daemons) cannot be read, so top-process and connection lists cover your own processes;
+  the others are counted as hidden.
 - In Nerd mode each top process has a menu (also on right-click) to Quit (SIGTERM) or
   Force Quit (SIGKILL) it after a confirmation dialog. Only processes owned by you can be
   stopped, never with an admin prompt; processes of the system or other users,

@@ -31,6 +31,8 @@ struct NetworkSection: View {
                     StatRow("Sent since boot", Format.bytes(network.totalSentBytes))
                     Text("Upload").foregroundStyle(.secondary)
                     Sparkline(values: coordinator.history[.upload]?.values ?? [], tint: .pink)
+                    Divider()
+                    ConnectionsView(reading: coordinator.snapshot.connections)
                 }
             }
         }

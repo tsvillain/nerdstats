@@ -3,6 +3,9 @@
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <MacTypes.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 // MARK: - IOHIDEventSystemClient (private)
 //
@@ -82,5 +85,30 @@ static const uint32_t kNerdStatsSMCHandleYPCEvent = 2;
 /// Commands placed in NSSMCParamStruct.data8.
 static const char kNerdStatsSMCCommandReadBytes = 5;
 static const char kNerdStatsSMCCommandReadKeyInfo = 9;
+
+// MARK: - NetworkStatistics (private framework)
+//
+// Per-socket byte counters come from NetworkStatistics.framework, the private framework
+// behind `nettop`. It reads the kernel's network statistics without root. The framework
+// is loaded at runtime with dlopen, so a macOS release without it simply has no
+// per-connection throughput. The block-based API is wrapped in C here (NerdStatsPrivate.c).
+
+typedef struct NerdStatsTrafficMonitor NerdStatsTrafficMonitor;
+
+/// Called once per live TCP/UDP socket. Addresses are raw `sockaddr` bytes and may be NULL.
+typedef void (*NerdStatsTrafficVisitor)(void *_Nullable context, uint64_t sourceID, int32_t pid, bool isTCP,
+                                        const uint8_t *_Nullable localAddress, size_t localLength,
+                                        const uint8_t *_Nullable remoteAddress, size_t remoteLength,
+                                        uint64_t receivedBytes, uint64_t sentBytes);
+
+/// Starts watching every TCP and UDP socket. Returns NULL when the framework is unavailable.
+NerdStatsTrafficMonitor *_Nullable NerdStatsTrafficMonitorCreate(void);
+/// Stops watching and frees the monitor.
+void NerdStatsTrafficMonitorDestroy(NerdStatsTrafficMonitor *_Nonnull monitor);
+/// Refreshes all counters and socket addresses, waiting at most `timeoutSeconds`, then visits every known socket.
+/// Returns false if the refresh did not finish in time (the visitor is still called with the
+/// last known values).
+bool NerdStatsTrafficMonitorQuery(NerdStatsTrafficMonitor *_Nonnull monitor, double timeoutSeconds,
+                                  void *_Nullable context, NerdStatsTrafficVisitor _Nonnull visitor);
 
 #endif

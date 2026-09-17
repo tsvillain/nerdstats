@@ -63,7 +63,7 @@ public final class ProcessSampler: Sampler {
         )
     }
 
-    private static func allPIDs() -> [Int32] {
+    static func allPIDs() -> [Int32] {
         let estimate = proc_listallpids(nil, 0)
         guard estimate > 0 else { return [] }
         // Leave headroom for processes started between the two calls.
@@ -72,7 +72,7 @@ public final class ProcessSampler: Sampler {
         return count > 0 ? Array(pids.prefix(Int(count))) : []
     }
 
-    private static func name(of pid: Int32) -> String {
+    static func name(of pid: Int32) -> String {
         var buffer = [CChar](repeating: 0, count: 256)
         let length = proc_name(pid, &buffer, UInt32(buffer.count))
         return length > 0 ? String(cString: buffer) : "pid \(pid)"
