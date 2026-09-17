@@ -1,4 +1,4 @@
-# NerdStats developer commands. See README.md for details.
+# NerdStats developer commands. See CONTRIBUTING.md for details.
 
 APP := build/NerdStats.app
 
