@@ -22,6 +22,7 @@ export VERSION
 
 APP="$ROOT/build/NerdStats.app"
 DMG="$ROOT/build/NerdStats-$VERSION.dmg"
+RW_DMG="$ROOT/build/NerdStats-$VERSION-rw.dmg"
 STAGING="$ROOT/build/dmg-staging"
 
 "$ROOT/scripts/build-app.sh" release
@@ -61,11 +62,26 @@ NerdStats starts at login by default; change it in NerdStats Settings. Keep the 
 /Applications so macOS can find it at login.
 TXT
 
+# Finder shows a volume icon only when the disk image root carries .VolumeIcon.icns
+# *and* has the "custom icon" Finder flag, which can only be set on a writable,
+# mounted volume - hence the writable image that is compressed at the end.
+cp "$ROOT/Resources/AppIcon.icns" "$STAGING/.VolumeIcon.icns"
+
 echo "==> Creating $DMG"
-rm -f "$DMG"
+rm -f "$DMG" "$RW_DMG"
 hdiutil create -volname "NerdStats $VERSION" -srcfolder "$STAGING" -fs HFS+ \
-  -format UDZO -imagekey zlib-level=9 -ov "$DMG"
+  -format UDRW -ov "$RW_DMG"
+MOUNT="$(mktemp -d)"
+hdiutil attach "$RW_DMG" -nobrowse -readwrite -mountpoint "$MOUNT" >/dev/null
+# Byte 8 of a folder's FinderInfo holds kHasCustomIcon (0x04 of the high flags byte).
+xattr -wx com.apple.FinderInfo \
+  "00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00" \
+  "$MOUNT"
+hdiutil detach "$MOUNT" >/dev/null
+rmdir "$MOUNT"
+hdiutil convert "$RW_DMG" -format UDZO -imagekey zlib-level=9 -o "$DMG" >/dev/null
 hdiutil verify "$DMG"
+rm -f "$RW_DMG"
 rm -rf "$STAGING"
 
 echo "==> Done: $DMG"

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- NerdStats app icon. Vector source of record for Resources/AppIcon.icns;
+       regenerate the .icns with scripts/make-icon.sh after editing this file.
+       Geometry matches the website mark in docs/favicon.svg, placed on the
+       824x824 artwork square macOS expects inside a 1024x1024 canvas. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#23262e"/>
+      <stop offset="1" stop-color="#101216"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(100 100) scale(12.875)">
+    <rect width="64" height="64" rx="14.4" fill="url(#bg)"/>
+    <rect x="0.35" y="0.35" width="63.3" height="63.3" rx="14.05" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="0.7"/>
+    <path d="M12 39h8l5-16 7 26 6-34 5 24h9" fill="none" stroke="#3ddc97" stroke-width="6"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
