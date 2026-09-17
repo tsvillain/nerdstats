@@ -64,12 +64,14 @@ public struct ProcessReading: Equatable, Sendable {
 // MARK: - GPU
 
 public struct GPUReading: Equatable, Sendable, Identifiable {
+    /// Position in registry order; names are not unique when a Mac has two identical GPUs.
+    public var index: Int
     public var name: String
     /// 0...1, `nil` if the driver does not report it.
     public var utilization: Double?
     public var memoryUsedBytes: UInt64?
     public var memoryTotalBytes: UInt64?
-    public var id: String { name }
+    public var id: Int { index }
 }
 
 // MARK: - Memory
@@ -193,9 +195,10 @@ public struct SensorReading: Equatable, Sendable {
 
     public static let empty = SensorReading(temperatures: [], fans: [])
 
-    /// Hottest CPU sensor, falling back to the SoC average on chips without per-cluster sensors.
+    /// Hottest CPU sensor, falling back to the hottest SoC sensor on chips without
+    /// per-cluster sensors. (Averaging would mix in cooler board sensors near the die.)
     public var cpuCelsius: Double? {
-        hottest(.cpu) ?? average(.soc)
+        hottest(.cpu) ?? hottest(.soc)
     }
 
     public var gpuCelsius: Double? { hottest(.gpu) }

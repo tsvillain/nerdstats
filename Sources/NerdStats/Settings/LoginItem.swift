@@ -24,12 +24,12 @@ enum LoginItem {
     }
 
     /// Turns launch-at-login on the first time the app runs. Later launches respect
-    /// whatever the user chose.
+    /// whatever the user chose. If registration fails, the next launch tries again.
     static func enableOnFirstRun(defaults: UserDefaults = .standard) {
         guard !defaults.bool(forKey: didApplyDefaultKey) else { return }
-        defaults.set(true, forKey: didApplyDefaultKey)
         do {
             try setEnabled(true)
+            defaults.set(true, forKey: didApplyDefaultKey)
         } catch {
             NSLog("NerdStats: could not enable launch at login: \(error.localizedDescription)")
         }

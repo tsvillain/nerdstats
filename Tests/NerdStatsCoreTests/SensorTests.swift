@@ -11,6 +11,7 @@ final class SensorTests: XCTestCase {
         XCTAssertEqual(SensorClassifier.category(forHIDName: "PMU tdie1"), .soc)
         XCTAssertEqual(SensorClassifier.category(forHIDName: "SOC MTR Temp Sensor0"), .soc)
         XCTAssertEqual(SensorClassifier.category(forHIDName: "ANE MTR Temp Sensor1"), .other)
+        XCTAssertEqual(SensorClassifier.category(forHIDName: "PMU2 tcal"), .other)
     }
 
     func testDuplicateNamesAreNumbered() {
@@ -32,9 +33,9 @@ final class SensorTests: XCTestCase {
         XCTAssertEqual(reading.batteryCelsius, 32)
     }
 
-    func testProcessorFallsBackToSoCAverage() {
-        let reading = SensorReading(temperatures: [sensor("s1", .soc, 50), sensor("s2", .soc, 60)], fans: [])
-        XCTAssertEqual(reading.cpuCelsius, 55)
+    func testProcessorFallsBackToHottestSoCSensor() {
+        let reading = SensorReading(temperatures: [sensor("tdev", .soc, 44), sensor("tdie", .soc, 95)], fans: [])
+        XCTAssertEqual(reading.cpuCelsius, 95)
         XCTAssertNil(SensorReading.empty.cpuCelsius)
     }
 

@@ -17,6 +17,7 @@ public final class GPUSampler: Sampler {
                 ?? "GPU \(readings.count + 1)"
             let totalMB = (IORegistry.property("VRAM,totalMB", of: service, searchParents: true) as? NSNumber)?.uint64Value
             readings.append(GPUReading(
+                index: readings.count,
                 name: name,
                 utilization: GPUStatistics.utilization(stats),
                 memoryUsedBytes: GPUStatistics.memoryUsed(stats),

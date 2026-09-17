@@ -51,6 +51,8 @@ public final class HIDTemperatureSensors {
 public enum SensorClassifier {
     public static func category(forHIDName name: String) -> TemperatureSensor.Category {
         let lower = name.lowercased()
+        // "tcal" is a fixed calibration value, not a live temperature.
+        if lower.contains("tcal") { return .other }
         if lower.contains("pacc") || lower.contains("eacc") || lower.contains("cpu") { return .cpu }
         if lower.contains("gpu") { return .gpu }
         if lower.contains("battery") || lower.contains("gas gauge") { return .battery }

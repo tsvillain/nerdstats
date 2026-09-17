@@ -6,7 +6,9 @@ import SystemConfiguration
 public final class NetworkSampler: Sampler {
     private var downloadRate = CounterRate()
     private var uploadRate = CounterRate()
-    private lazy var displayNames: [String: String] = Self.interfaceDisplayNames()
+    private var displayNames: [String: String] = [:]
+    /// Interface names seen at the last refresh of `displayNames`.
+    private var seenInterfaces: Set<String>?
 
     public init() {}
 
@@ -18,9 +20,13 @@ public final class NetworkSampler: Sampler {
         // Throughput is summed over hardware interfaces so it keeps working while the primary
         // interface changes (e.g. Wi-Fi to Ethernet). Virtual interfaces are skipped because
         // VPN tunnels (utun), AirDrop (awdl) and bridges would count the same bytes twice.
-        let isHardware = { NetworkInterfaces.isHardware($0, knownNames: self.displayNames.keys) }
-
-        let counters = Self.interfaceCounters().filter { isHardware($0.key) }
+        let allCounters = Self.interfaceCounters()
+        // Adapters can be plugged in while the app runs (USB Ethernet, tethering, docks).
+        if seenInterfaces != Set(allCounters.keys) {
+            seenInterfaces = Set(allCounters.keys)
+            displayNames = Self.interfaceDisplayNames()
+        }
+        let counters = allCounters.filter { NetworkInterfaces.isHardware($0.key, knownNames: displayNames.keys) }
         let received = counters.values.reduce(0) { $0 &+ $1.received }
         let sent = counters.values.reduce(0) { $0 &+ $1.sent }
 

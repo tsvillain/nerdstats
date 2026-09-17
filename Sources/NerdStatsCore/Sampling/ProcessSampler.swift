@@ -8,9 +8,8 @@ import Foundation
 public final class ProcessSampler: Sampler {
     public var limit: Int
 
-    /// CPU time per pid at the previous sample, in nanoseconds.
-    private var previousCPUTime: [Int32: UInt64] = [:]
-    private var previousTime: TimeInterval?
+    /// CPU time rate per pid, in nanoseconds per second.
+    private var cpuRates: [Int32: CounterRate] = [:]
     private let timebase: mach_timebase_info_data_t = {
         var info = mach_timebase_info_data_t()
         mach_timebase_info(&info)
@@ -24,8 +23,7 @@ public final class ProcessSampler: Sampler {
     public func sample() -> ProcessReading? {
         let now = monotonicSeconds()
         let pids = Self.allPIDs()
-        let elapsed = previousTime.map { now - $0 }
-        var currentCPUTime: [Int32: UInt64] = [:]
+        var currentRates: [Int32: CounterRate] = [:]
         var usages: [ProcessUsage] = []
 
         for pid in pids where pid > 0 {
@@ -35,18 +33,15 @@ public final class ProcessSampler: Sampler {
 
             // pti_total_* are Mach absolute time units, which are not nanoseconds on Apple Silicon.
             let cpuTime = (info.pti_total_user + info.pti_total_system) * UInt64(timebase.numer) / UInt64(timebase.denom)
-            currentCPUTime[pid] = cpuTime
+            var rate = cpuRates[pid] ?? CounterRate()
+            let cpu = (rate.update(cpuTime, at: now) ?? 0) / 1_000_000_000
+            currentRates[pid] = rate
 
-            var cpu = 0.0
-            if let elapsed, elapsed > 0, let previous = previousCPUTime[pid], cpuTime >= previous {
-                cpu = Double(cpuTime - previous) / 1_000_000_000 / elapsed
-            }
             usages.append(ProcessUsage(pid: pid, name: Self.name(of: pid), cpu: cpu,
                                        memoryBytes: Self.footprint(of: pid) ?? info.pti_resident_size))
         }
 
-        previousCPUTime = currentCPUTime
-        previousTime = now
+        cpuRates = currentRates
 
         return ProcessReading(
             topByCPU: Array(usages.sorted { $0.cpu > $1.cpu }.prefix(limit)),
