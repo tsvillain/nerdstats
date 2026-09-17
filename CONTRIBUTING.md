@@ -23,6 +23,16 @@ SwiftPM product for both architectures and wraps it in an `.app` bundle with
 [`Resources/Info.plist`](Resources/Info.plist). The bundle is ad-hoc signed so it can run
 locally; Developer ID signing and notarization are not set up yet.
 
+## App icon
+
+[`Resources/AppIcon.svg`](Resources/AppIcon.svg) is the source of record; the generated
+[`Resources/AppIcon.icns`](Resources/AppIcon.icns) is committed so a build never needs a
+renderer. `scripts/build-app.sh` copies it into `Contents/Resources` before signing, and
+`Info.plist` points at it through `CFBundleIconFile`. After editing the
+SVG, regenerate the `.icns` with [`scripts/make-icon.sh`](scripts/make-icon.sh) (macOS
+`qlmanage`, `sips` and `iconutil` only) and commit both files. Finder and the Dock cache
+icons aggressively, so an updated icon may not appear until `killall Dock` or a relaunch.
+
 To open the code in Xcode, open `Package.swift`.
 
 ## Releasing

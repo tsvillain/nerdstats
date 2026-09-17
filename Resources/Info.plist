@@ -8,6 +8,8 @@
 	<string>NerdStats</string>
 	<key>CFBundleExecutable</key>
 	<string>NerdStats</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.tsvillain.nerdstats</string>
 	<key>CFBundleInfoDictionaryVersion</key>
