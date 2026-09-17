@@ -69,6 +69,7 @@ Sources/
     Formatting/        Units and human-readable formatting
     MenuBar/           Pure menu bar item logic: settings migration, readouts, icons,
                        which subsystems to sample, dashboard section order
+    Processes/         Which processes may be stopped, and sending Quit/Force Quit signals
   NerdStats/           The app
     App/               Entry point, StatsCoordinator (the sampling schedule),
                        StatusItemController (menu bar items and dashboard popover), --dump
@@ -94,9 +95,9 @@ Data flows one way:
 4. SwiftUI views read the published snapshot and history; they never touch system APIs.
 
 Logic that can be tested without hardware (tick deltas, rates, battery parsing, SMC
-decoding, formatting, status thresholds, menu bar item decisions) lives in `Math/`,
-`Formatting/`, `MenuBar/` and small parser types such as `BatteryParser` and
-`GPUStatistics`, and is covered by the tests.
+decoding, formatting, status thresholds, menu bar item decisions, process stop
+permissions) lives in `Math/`, `Formatting/`, `MenuBar/`, `Processes/` and small parser
+types such as `BatteryParser` and `GPUStatistics`, and is covered by the tests.
 
 ## Where the data comes from
 
