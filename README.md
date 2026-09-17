@@ -24,9 +24,9 @@ Requires macOS 13 Ventura or later.
 The battery section is hidden on Macs without a battery. Anything a particular Mac does not
 report is shown as unavailable instead of a guessed value.
 
-In Settings you can turn on separate menu bar items for **CPU**, **GPU**, **SSD** and
-**Battery**, in any combination. Each has its own icon and a compact value: CPU usage
-(or CPU temperature, or both), GPU utilization, used space on the startup disk, and battery
+In Settings you can turn on separate menu bar items for **CPU**, **GPU**, **Memory**,
+**SSD** and **Battery**, in any combination. Each has its own icon and a compact value: CPU usage
+(or CPU temperature, or both), GPU utilization, memory in use, used space on the startup disk, and battery
 charge. Clicking an item opens the dashboard with that metric's section at the top; the
 other sections follow below. The battery item hides itself on Macs without a battery, and
 when no item is shown NerdStats falls back to a plain icon so the dashboard, Settings and

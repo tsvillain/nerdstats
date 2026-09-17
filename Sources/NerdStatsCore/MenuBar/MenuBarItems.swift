@@ -3,7 +3,7 @@ import Foundation
 /// A metric that can have its own item in the menu bar. Items appear left to right in
 /// declaration order.
 public enum MenuBarItem: String, CaseIterable, Sendable, Identifiable {
-    case cpu, gpu, storage, battery
+    case cpu, gpu, memory, storage, battery
 
     public var id: String { rawValue }
 
@@ -11,6 +11,7 @@ public enum MenuBarItem: String, CaseIterable, Sendable, Identifiable {
         switch self {
         case .cpu: return "CPU"
         case .gpu: return "GPU"
+        case .memory: return "Memory"
         case .storage: return "SSD"
         case .battery: return "Battery"
         }
@@ -21,6 +22,7 @@ public enum MenuBarItem: String, CaseIterable, Sendable, Identifiable {
         switch self {
         case .cpu: return .processor
         case .gpu: return .graphics
+        case .memory: return .memory
         case .storage: return .storage
         case .battery: return .battery
         }
@@ -59,6 +61,7 @@ public struct MenuBarValues: Equatable, Sendable {
     public var cpuPercent: Int?
     public var cpuCelsius: Int?
     public var gpuPercent: Int?
+    public var memoryUsedPercent: Int?
     public var storageUsedPercent: Int?
     public var batteryPercent: Int?
     public var isCharging = false
@@ -81,6 +84,9 @@ public struct MenuBarValues: Equatable, Sendable {
         }
         if sampled.contains(.gpu) {
             gpuPercent = percent(snapshot.gpus?.compactMap(\.utilization).max())
+        }
+        if sampled.contains(.memory) {
+            memoryUsedPercent = percent(snapshot.memory?.usedFraction)
         }
         if sampled.contains(.disk) {
             storageUsedPercent = percent(Self.startupVolume(snapshot.disk?.volumes ?? [])?.usedFraction)
@@ -116,6 +122,7 @@ public enum MenuBarLayout {
         var subsystems: Set<Subsystem> = [.cpu]
         if enabled.contains(.cpu), cpuReadout != .usage { subsystems.insert(.processorTemperature) }
         if enabled.contains(.gpu) { subsystems.insert(.gpu) }
+        if enabled.contains(.memory) { subsystems.insert(.memory) }
         if enabled.contains(.storage) { subsystems.insert(.disk) }
         if enabled.contains(.battery) { subsystems.insert(.power) }
         return subsystems
@@ -135,6 +142,7 @@ public enum MenuBarLayout {
             case .usageAndTemperature: return "\(usage) \(temperature)"
             }
         case .gpu: return percent(values.gpuPercent)
+        case .memory: return percent(values.memoryUsedPercent)
         case .storage: return percent(values.storageUsedPercent)
         case .battery: return percent(values.batteryPercent)
         }
@@ -146,6 +154,7 @@ public enum MenuBarLayout {
         switch item {
         case .cpu: return "cpu"
         case .gpu: return "rectangle.3.group"
+        case .memory: return "memorychip"
         case .storage: return "internaldrive"
         case .battery:
             if values.isCharging { return "battery.100.bolt" }
@@ -195,8 +204,7 @@ public enum MenuBarPreferences {
         case "cpu": return ([.cpu], .usage)
         case "temperature": return ([.cpu], .temperature)
         case "cpuAndTemperature": return ([.cpu], .usageAndTemperature)
-        // There is no memory item; CPU usage is the closest remaining readout.
-        case "memory": return ([.cpu], .usage)
+        case "memory": return ([.memory], defaultCPUReadout)
         default: return nil
         }
     }

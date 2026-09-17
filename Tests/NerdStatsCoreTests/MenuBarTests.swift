@@ -18,8 +18,7 @@ final class MenuBarPreferencesTests: XCTestCase {
         XCTAssertEqual(migrate("cpu").1, .usage)
         XCTAssertEqual(migrate("temperature").1, .temperature)
         XCTAssertEqual(migrate("cpuAndTemperature").1, .usageAndTemperature)
-        XCTAssertEqual(migrate("memory").0, [.cpu])
-        XCTAssertEqual(migrate("memory").1, .usage)
+        XCTAssertEqual(migrate("memory").0, [.memory])
         XCTAssertEqual(migrate("unknown").0, [.cpu])
     }
 
@@ -40,9 +39,9 @@ final class MenuBarPreferencesTests: XCTestCase {
 final class MenuBarLayoutTests: XCTestCase {
     func testVisibleItemsKeepOrderAndHideMissingBattery() {
         let all = Set(MenuBarItem.allCases)
-        XCTAssertEqual(MenuBarLayout.visibleItems(enabled: all, hasBattery: nil), [.cpu, .gpu, .storage, .battery])
-        XCTAssertEqual(MenuBarLayout.visibleItems(enabled: all, hasBattery: true), [.cpu, .gpu, .storage, .battery])
-        XCTAssertEqual(MenuBarLayout.visibleItems(enabled: all, hasBattery: false), [.cpu, .gpu, .storage])
+        XCTAssertEqual(MenuBarLayout.visibleItems(enabled: all, hasBattery: nil), [.cpu, .gpu, .memory, .storage, .battery])
+        XCTAssertEqual(MenuBarLayout.visibleItems(enabled: all, hasBattery: true), [.cpu, .gpu, .memory, .storage, .battery])
+        XCTAssertEqual(MenuBarLayout.visibleItems(enabled: all, hasBattery: false), [.cpu, .gpu, .memory, .storage])
         XCTAssertEqual(MenuBarLayout.visibleItems(enabled: [.battery], hasBattery: false), [])
         XCTAssertEqual(MenuBarLayout.visibleItems(enabled: [.storage, .cpu], hasBattery: nil), [.cpu, .storage])
     }
@@ -52,8 +51,8 @@ final class MenuBarLayoutTests: XCTestCase {
         XCTAssertEqual(MenuBarLayout.requiredSubsystems(enabled: [.cpu], cpuReadout: .usage), [.cpu])
         XCTAssertEqual(MenuBarLayout.requiredSubsystems(enabled: [.cpu], cpuReadout: .temperature),
                        [.cpu, .processorTemperature])
-        XCTAssertEqual(MenuBarLayout.requiredSubsystems(enabled: [.gpu, .storage, .battery], cpuReadout: .temperature),
-                       [.cpu, .gpu, .disk, .power])
+        XCTAssertEqual(MenuBarLayout.requiredSubsystems(enabled: [.gpu, .memory, .storage, .battery], cpuReadout: .temperature),
+                       [.cpu, .gpu, .memory, .disk, .power])
     }
 
     func testText() {
@@ -61,11 +60,13 @@ final class MenuBarLayoutTests: XCTestCase {
         values.cpuPercent = 42
         values.cpuCelsius = 61
         values.gpuPercent = 7
+        values.memoryUsedPercent = 63
         values.batteryPercent = 98
         XCTAssertEqual(MenuBarLayout.text(for: .cpu, values: values, cpuReadout: .usage, unit: .celsius), "42%")
         XCTAssertEqual(MenuBarLayout.text(for: .cpu, values: values, cpuReadout: .temperature, unit: .fahrenheit), "142°F")
         XCTAssertEqual(MenuBarLayout.text(for: .cpu, values: values, cpuReadout: .usageAndTemperature, unit: .celsius), "42% 61°C")
         XCTAssertEqual(MenuBarLayout.text(for: .gpu, values: values, cpuReadout: .usage, unit: .celsius), "7%")
+        XCTAssertEqual(MenuBarLayout.text(for: .memory, values: values, cpuReadout: .usage, unit: .celsius), "63%")
         XCTAssertEqual(MenuBarLayout.text(for: .storage, values: values, cpuReadout: .usage, unit: .celsius), "–")
         XCTAssertEqual(MenuBarLayout.text(for: .battery, values: values, cpuReadout: .usage, unit: .celsius), "98%")
     }
@@ -101,6 +102,9 @@ final class MenuBarValuesTests: XCTestCase {
         snapshot.cpu = CPUReading(total: CPUUsage(user: 0.3, system: 0.12, idle: 0.58), perCore: [], loadAverages: [])
         snapshot.gpus = [GPUReading(index: 0, name: "A", utilization: 0.2),
                          GPUReading(index: 1, name: "B", utilization: 0.55)]
+        snapshot.memory = MemoryReading(totalBytes: 1000, appBytes: 300, wiredBytes: 150, compressedBytes: 50,
+                                        cachedBytes: 200, freeBytes: 300, swapUsedBytes: 0, swapTotalBytes: 0,
+                                        pressure: .normal)
         snapshot.disk = DiskReading(volumes: [volume("/Volumes/USB", total: 100, available: 90, isInternal: false),
                                               volume("/", total: 200, available: 50)],
                                     readBytesPerSecond: nil, writeBytesPerSecond: nil, totalReadBytes: 0, totalWriteBytes: 0)
@@ -108,11 +112,13 @@ final class MenuBarValuesTests: XCTestCase {
         let cpuOnly = MenuBarValues(snapshot: snapshot, sampled: [.cpu])
         XCTAssertEqual(cpuOnly.cpuPercent, 42)
         XCTAssertNil(cpuOnly.gpuPercent)
+        XCTAssertNil(cpuOnly.memoryUsedPercent)
         XCTAssertNil(cpuOnly.storageUsedPercent)
         XCTAssertNil(cpuOnly.hasBattery)
 
         let all = MenuBarValues(snapshot: snapshot, sampled: Set(Subsystem.allCases))
         XCTAssertEqual(all.gpuPercent, 55)
+        XCTAssertEqual(all.memoryUsedPercent, 50)
         XCTAssertEqual(all.storageUsedPercent, 75)
         XCTAssertEqual(all.hasBattery, false)
         XCTAssertNil(all.batteryPercent)

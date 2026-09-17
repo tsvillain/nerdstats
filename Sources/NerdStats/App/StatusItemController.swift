@@ -104,7 +104,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         statusItems = [:]
         rendered = [:]
         // A new status item appears to the left of the app's existing ones, so create them
-        // right to left to keep CPU, GPU, SSD, Battery reading left to right.
+        // right to left to keep CPU, GPU, Memory, SSD, Battery reading left to right.
         for slot in newSlots.reversed() {
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
             if let button = item.button {
