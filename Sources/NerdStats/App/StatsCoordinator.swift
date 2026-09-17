@@ -87,6 +87,14 @@ final class StatsCoordinator: ObservableObject {
         }
     }
 
+    /// Resamples now and again shortly after, once a stopped process has had time to exit.
+    func refreshProcesses() {
+        sampleNow()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            self?.sampleNow()
+        }
+    }
+
     private var subsystemsToSample: Set<Subsystem> {
         if isDashboardVisible { return Set(Subsystem.allCases) }
         return MenuBarLayout.requiredSubsystems(enabled: settings.menuBarItems, cpuReadout: settings.cpuMenuBarReadout)

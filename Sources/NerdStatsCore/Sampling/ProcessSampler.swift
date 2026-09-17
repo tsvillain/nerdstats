@@ -43,9 +43,21 @@ public final class ProcessSampler: Sampler {
 
         cpuRates = currentRates
 
+        // Owner and start time are only needed for the listed rows, which can be stopped.
+        func withIdentity(_ top: ArraySlice<ProcessUsage>) -> [ProcessUsage] {
+            top.map { usage in
+                var usage = usage
+                if let identity = ProcessIdentity.read(pid: usage.pid) {
+                    usage.ownerUID = identity.ownerUID
+                    usage.startTime = identity.startTime
+                }
+                return usage
+            }
+        }
+
         return ProcessReading(
-            topByCPU: Array(usages.sorted { $0.cpu > $1.cpu }.prefix(limit)),
-            topByMemory: Array(usages.sorted { $0.memoryBytes > $1.memoryBytes }.prefix(limit)),
+            topByCPU: withIdentity(usages.sorted { $0.cpu > $1.cpu }.prefix(limit)),
+            topByMemory: withIdentity(usages.sorted { $0.memoryBytes > $1.memoryBytes }.prefix(limit)),
             inspectedCount: usages.count,
             totalCount: pids.count
         )

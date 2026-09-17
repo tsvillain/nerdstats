@@ -142,6 +142,9 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
                 self?.popover.performClose(nil)
                 self?.openSettings()
             }
+            .environment(\.confirmProcessStop) { [weak self] process, action in
+                self?.confirmStop(process, action: action) ?? false
+            }
         coordinator.dashboardDidAppear()
         let controller = NSHostingController(rootView: dashboard)
         popover.contentViewController = controller
@@ -151,6 +154,24 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         NSApp.activate(ignoringOtherApps: true)
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         button.highlight(true)
+    }
+
+    private func confirmStop(_ process: ProcessUsage, action: ProcessStopAction) -> Bool {
+        let alert = NSAlert()
+        alert.alertStyle = action == .forceQuit ? .critical : .warning
+        alert.messageText = "\(action.title) \(process.name) (PID \(process.pid))?"
+        switch action {
+        case .quit:
+            alert.informativeText = "The process is asked to quit and may save its work first."
+        case .forceQuit:
+            alert.informativeText = "The process ends immediately. Any unsaved work in it will be lost."
+        }
+        alert.addButton(withTitle: action.title)
+        alert.addButton(withTitle: "Cancel")
+        // A transient popover closes when the alert takes focus, taking the result with it.
+        popover.behavior = .applicationDefined
+        defer { popover.behavior = .transient }
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     func popoverWillClose(_ notification: Notification) {
