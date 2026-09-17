@@ -10,7 +10,7 @@ enum Metric: CaseIterable {
 /// The single place that decides when and what to sample.
 ///
 /// A timer fires every `refreshInterval` seconds. While the dashboard is closed only the
-/// subsystems the menu bar readout needs are sampled, which keeps NerdStats' own CPU cost
+/// subsystems the enabled menu bar items need are sampled, which keeps NerdStats' own CPU cost
 /// negligible. Opening the dashboard samples immediately and then refreshes everything.
 /// Samplers run on a private serial queue; results are published on the main thread.
 ///
@@ -50,7 +50,10 @@ final class StatsCoordinator: ObservableObject {
         settings.$refreshInterval.dropFirst().removeDuplicates()
             .sink { [weak self] _ in DispatchQueue.main.async { self?.restartTimer() } }
             .store(in: &cancellables)
-        settings.$menuBarReadout.dropFirst().removeDuplicates()
+        settings.$menuBarItems.dropFirst().removeDuplicates()
+            .sink { [weak self] _ in DispatchQueue.main.async { self?.sampleNow() } }
+            .store(in: &cancellables)
+        settings.$cpuMenuBarReadout.dropFirst().removeDuplicates()
             .sink { [weak self] _ in DispatchQueue.main.async { self?.sampleNow() } }
             .store(in: &cancellables)
     }
@@ -86,7 +89,7 @@ final class StatsCoordinator: ObservableObject {
 
     private var subsystemsToSample: Set<Subsystem> {
         if isDashboardVisible { return Set(Subsystem.allCases) }
-        return settings.menuBarReadout.requiredSubsystems
+        return MenuBarLayout.requiredSubsystems(enabled: settings.menuBarItems, cpuReadout: settings.cpuMenuBarReadout)
     }
 
     private func restartTimer() {
@@ -141,7 +144,7 @@ final class StatsCoordinator: ObservableObject {
         }
         if subsystems.contains(.power) { record(.systemPower, snapshot.power?.systemWatts) }
 
-        menuBar.update(with: snapshot)
+        menuBar.update(with: snapshot, sampled: subsystems)
         if isDashboardVisible {
             self.snapshot = snapshot
             history = latestHistory

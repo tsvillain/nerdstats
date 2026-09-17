@@ -24,7 +24,9 @@ final class SettingsWindowController {
             )
             window.title = "NerdStats Settings"
             window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: SettingsView().environmentObject(settings))
+            let content = NSHostingView(rootView: SettingsView().environmentObject(settings))
+            window.contentView = content
+            window.setContentSize(content.fittingSize)
             window.center()
             self.window = window
         }

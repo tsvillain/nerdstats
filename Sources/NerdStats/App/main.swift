@@ -5,5 +5,5 @@ import Foundation
 if CommandLine.arguments.contains("--dump") {
     DumpCommand.run()
 } else {
-    NerdStatsApp.main()
+    MainActor.assumeIsolated { NerdStatsApp.main() }
 }

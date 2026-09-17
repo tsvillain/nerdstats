@@ -1,43 +1,16 @@
 import Foundation
 import NerdStatsCore
 
-/// What the menu bar item shows next to (or instead of) the icon.
-enum MenuBarReadout: String, CaseIterable, Identifiable {
-    case icon
-    case cpu
-    case temperature
-    case cpuAndTemperature
-    case memory
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .icon: return "Icon only"
-        case .cpu: return "CPU usage"
-        case .temperature: return "CPU temperature"
-        case .cpuAndTemperature: return "CPU usage and temperature"
-        case .memory: return "Memory usage"
-        }
-    }
-
-    /// Subsystems that must keep sampling while the dashboard is closed.
-    var requiredSubsystems: Set<Subsystem> {
-        switch self {
-        case .icon, .cpu: return [.cpu]
-        case .temperature, .cpuAndTemperature: return [.cpu, .processorTemperature]
-        case .memory: return [.cpu, .memory]
-        }
-    }
-}
-
 /// User preferences, persisted in UserDefaults.
 final class AppSettings: ObservableObject {
     static let refreshIntervals: [TimeInterval] = [1, 2, 5, 10]
 
     private enum Key {
         static let refreshInterval = "refreshInterval"
-        static let menuBarReadout = "menuBarReadout"
+        static let menuBarItems = "menuBarItems"
+        static let cpuMenuBarReadout = "cpuMenuBarReadout"
+        /// The single "Menu bar shows" choice from before items could be enabled separately.
+        static let legacyMenuBarReadout = "menuBarReadout"
         static let temperatureUnit = "temperatureUnit"
         static let nerdMode = "nerdMode"
     }
@@ -48,8 +21,15 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(refreshInterval, forKey: Key.refreshInterval) }
     }
 
-    @Published var menuBarReadout: MenuBarReadout {
-        didSet { defaults.set(menuBarReadout.rawValue, forKey: Key.menuBarReadout) }
+    /// Metrics with their own menu bar item. When none is visible the app icon is shown instead.
+    @Published var menuBarItems: Set<MenuBarItem> {
+        didSet {
+            defaults.set(MenuBarItem.allCases.filter(menuBarItems.contains).map(\.rawValue), forKey: Key.menuBarItems)
+        }
+    }
+
+    @Published var cpuMenuBarReadout: CPUMenuBarReadout {
+        didSet { defaults.set(cpuMenuBarReadout.rawValue, forKey: Key.cpuMenuBarReadout) }
     }
 
     @Published var temperatureUnit: TemperatureUnit {
@@ -65,7 +45,13 @@ final class AppSettings: ObservableObject {
         self.defaults = defaults
         let interval = defaults.double(forKey: Key.refreshInterval)
         refreshInterval = Self.refreshIntervals.contains(interval) ? interval : 2
-        menuBarReadout = defaults.string(forKey: Key.menuBarReadout).flatMap(MenuBarReadout.init) ?? .cpuAndTemperature
+        let menuBar = MenuBarPreferences.resolve(
+            storedItems: defaults.stringArray(forKey: Key.menuBarItems),
+            storedCPUReadout: defaults.string(forKey: Key.cpuMenuBarReadout),
+            legacyReadout: defaults.string(forKey: Key.legacyMenuBarReadout)
+        )
+        menuBarItems = menuBar.items
+        cpuMenuBarReadout = menuBar.cpuReadout
         temperatureUnit = defaults.string(forKey: Key.temperatureUnit).flatMap(TemperatureUnit.init) ?? .celsius
         nerdMode = defaults.bool(forKey: Key.nerdMode)
     }
