@@ -28,7 +28,7 @@ locally; Developer ID signing and notarization are not set up yet.
 [`Resources/AppIcon.svg`](Resources/AppIcon.svg) is the source of record; the generated
 [`Resources/AppIcon.icns`](Resources/AppIcon.icns) is committed so a build never needs a
 renderer. `scripts/build-app.sh` copies it into `Contents/Resources` before signing, and
-`Info.plist` points at it through `CFBundleIconFile`/`CFBundleIconName`. After editing the
+`Info.plist` points at it through `CFBundleIconFile`. After editing the
 SVG, regenerate the `.icns` with [`scripts/make-icon.sh`](scripts/make-icon.sh) (macOS
 `qlmanage`, `sips` and `iconutil` only) and commit both files. Finder and the Dock cache
 icons aggressively, so an updated icon may not appear until `killall Dock` or a relaunch.
