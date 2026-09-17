@@ -7,6 +7,8 @@ public enum Subsystem: CaseIterable, Sendable {
     case sensors
     /// Only the processor temperature: a cheap subset of `sensors` for the menu bar.
     case processorTemperature
+    /// Per-process sockets. Costlier than the rest, so only sampled while Nerd mode shows them.
+    case connections
 }
 
 /// Latest reading from every subsystem. Fields stay `nil` until first sampled, or when
@@ -21,6 +23,7 @@ public struct SystemSnapshot: Equatable, Sendable {
     public var network: NetworkReading?
     public var power: PowerReading?
     public var sensors: SensorReading?
+    public var connections: ConnectionReading?
     public var timestamp = Date()
 
     public init() {}
@@ -41,6 +44,7 @@ public final class SnapshotSampler: @unchecked Sendable {
     private let powerSampler = PowerSampler()
     /// Created on first use: opening the SMC and HID clients is only worth it if temperatures are wanted.
     private lazy var sensorSampler = SensorSampler()
+    private let connectionSampler = ConnectionSampler()
 
     private var snapshot = SystemSnapshot()
 
@@ -64,7 +68,13 @@ public final class SnapshotSampler: @unchecked Sendable {
                 if !subsystems.contains(.sensors) {
                     snapshot.sensors = sensorSampler.sample(processorOnly: true)
                 }
+            case .connections: snapshot.connections = connectionSampler.sample()
             }
+        }
+        if !subsystems.contains(.connections), snapshot.connections != nil {
+            // Release the traffic monitor and drop the list so it is not shown stale later.
+            connectionSampler.stop()
+            snapshot.connections = nil
         }
         // Newer Macs no longer publish the battery temperature in the registry; use the
         // battery sensor instead when one exists.

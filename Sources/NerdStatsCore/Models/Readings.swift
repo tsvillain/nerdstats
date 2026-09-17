@@ -213,3 +213,116 @@ public struct SensorReading: Equatable, Sendable {
         return values.isEmpty ? nil : values.reduce(0, +) / Double(values.count)
     }
 }
+
+// MARK: - Network connections
+
+public enum TransportProtocol: String, Sendable {
+    case tcp = "TCP"
+    case udp = "UDP"
+}
+
+/// TCP connection states, numbered as in the kernel's `tcp_fsm.h`.
+public enum TCPState: Int32, Sendable {
+    case closed = 0, listen, synSent, synReceived, established, closeWait, finWait1, closing, lastAck, finWait2, timeWait
+
+    public var title: String {
+        switch self {
+        case .closed: return "Closed"
+        case .listen: return "Listen"
+        case .synSent: return "SYN sent"
+        case .synReceived: return "SYN received"
+        case .established: return "Established"
+        case .closeWait: return "Close wait"
+        case .finWait1: return "FIN wait 1"
+        case .closing: return "Closing"
+        case .lastAck: return "Last ACK"
+        case .finWait2: return "FIN wait 2"
+        case .timeWait: return "Time wait"
+        }
+    }
+}
+
+/// Which IP versions a socket uses, as `netstat` labels them ("tcp4", "tcp6", "tcp46").
+public enum IPVersion: String, Sendable {
+    case v4 = "4"
+    case v6 = "6"
+    case dual = "46"
+}
+
+/// One end of a socket. A `nil` address is the wildcard (any address).
+public struct SocketEndpoint: Hashable, Sendable {
+    public var address: String?
+    public var port: UInt16
+
+    public init(address: String?, port: UInt16) {
+        self.address = address
+        self.port = port
+    }
+}
+
+public struct NetworkConnection: Equatable, Sendable, Identifiable {
+    public var pid: Int32
+    public var transport: TransportProtocol
+    public var ipVersion: IPVersion
+    public var local: SocketEndpoint
+    /// `nil` for listening TCP sockets and unconnected UDP sockets.
+    public var remote: SocketEndpoint?
+    /// `nil` for UDP.
+    public var tcpState: TCPState?
+    /// Reverse DNS name of the remote address, once resolved.
+    public var remoteHostName: String?
+    public var downloadBytesPerSecond: Double?
+    public var uploadBytesPerSecond: Double?
+    /// File descriptor, which keeps sockets with identical endpoints apart.
+    public var fileDescriptor: Int32
+
+    public init(pid: Int32, transport: TransportProtocol, ipVersion: IPVersion = .v4, local: SocketEndpoint, remote: SocketEndpoint?,
+                tcpState: TCPState?, remoteHostName: String? = nil,
+                downloadBytesPerSecond: Double? = nil, uploadBytesPerSecond: Double? = nil, fileDescriptor: Int32 = 0) {
+        self.pid = pid
+        self.transport = transport
+        self.ipVersion = ipVersion
+        self.local = local
+        self.remote = remote
+        self.tcpState = tcpState
+        self.remoteHostName = remoteHostName
+        self.downloadBytesPerSecond = downloadBytesPerSecond
+        self.uploadBytesPerSecond = uploadBytesPerSecond
+        self.fileDescriptor = fileDescriptor
+    }
+
+    public var id: String { "\(pid):\(fileDescriptor):\(ConnectionKey(self).description)" }
+}
+
+/// All sockets owned by one process.
+public struct ProcessConnections: Equatable, Sendable, Identifiable {
+    public var pid: Int32
+    public var name: String
+    public var connections: [NetworkConnection]
+    /// Throughput of every socket the process owns, `nil` where it cannot be measured.
+    public var downloadBytesPerSecond: Double?
+    public var uploadBytesPerSecond: Double?
+    public var id: Int32 { pid }
+
+    public init(pid: Int32, name: String, connections: [NetworkConnection],
+                downloadBytesPerSecond: Double? = nil, uploadBytesPerSecond: Double? = nil) {
+        self.pid = pid
+        self.name = name
+        self.connections = connections
+        self.downloadBytesPerSecond = downloadBytesPerSecond
+        self.uploadBytesPerSecond = uploadBytesPerSecond
+    }
+
+    public var totalBytesPerSecond: Double { (downloadBytesPerSecond ?? 0) + (uploadBytesPerSecond ?? 0) }
+}
+
+public struct ConnectionReading: Equatable, Sendable {
+    /// Processes with at least one internet socket, busiest first.
+    public var processes: [ProcessConnections]
+    /// Processes whose sockets cannot be listed without root (e.g. system daemons).
+    public var hiddenProcessCount: Int
+    /// False when per-connection throughput is unavailable on this Mac.
+    public var trafficAvailable: Bool
+
+    public var connectionCount: Int { processes.reduce(0) { $0 + $1.connections.count } }
+}
