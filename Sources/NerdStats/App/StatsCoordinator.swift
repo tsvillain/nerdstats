@@ -90,6 +90,14 @@ final class StatsCoordinator: ObservableObject {
         }
     }
 
+    /// Resamples now and again shortly after, once a stopped process has had time to exit.
+    func refreshProcesses() {
+        sampleNow()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            self?.sampleNow()
+        }
+    }
+
     private var subsystemsToSample: Set<Subsystem> {
         if isDashboardVisible {
             // Listing every socket is only worth it while Nerd mode shows the connections.

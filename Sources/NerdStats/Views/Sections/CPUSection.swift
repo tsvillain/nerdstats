@@ -49,11 +49,16 @@ private struct PerCoreGrid: View {
     }
 }
 
-/// A short table of processes with one formatted value each.
+/// A short table of processes with one formatted value each. Each row offers Quit and
+/// Force Quit for the user's own processes; others show a lock explaining why not.
 struct ProcessList: View {
     let title: String
     let processes: [ProcessUsage]
     let value: (ProcessUsage) -> String
+
+    @EnvironmentObject private var coordinator: StatsCoordinator
+    @Environment(\.confirmProcessStop) private var confirmProcessStop
+    @State private var failure: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -62,8 +67,68 @@ struct ProcessList: View {
                 Text("Collecting…").foregroundStyle(.secondary)
             }
             ForEach(processes) { process in
-                StatRow(process.name, value(process))
+                row(process)
+            }
+            if let failure {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                    Text(failure).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 4)
+                    Button {
+                        self.failure = nil
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Dismiss")
+                }
             }
         }
+    }
+
+    private func row(_ process: ProcessUsage) -> some View {
+        let permission = ProcessControl.permission(for: process)
+        return HStack(spacing: 4) {
+            StatRow(process.name, value(process))
+            if permission.isAllowed {
+                Menu {
+                    actions(for: process)
+                } label: {
+                    Image(systemName: "xmark.circle")
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .help("Quit \(process.name) (PID \(process.pid))")
+            } else {
+                Image(systemName: "lock")
+                    .foregroundStyle(.secondary)
+                    .help(permission.reason ?? "")
+            }
+        }
+        .contextMenu {
+            if permission.isAllowed {
+                actions(for: process)
+            } else {
+                Text(permission.reason ?? "")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func actions(for process: ProcessUsage) -> some View {
+        ForEach(ProcessStopAction.allCases) { action in
+            Button("\(action.title) \(process.name)…") {
+                stop(process, action: action)
+            }
+        }
+    }
+
+    private func stop(_ process: ProcessUsage, action: ProcessStopAction) {
+        guard confirmProcessStop(process, action) else { return }
+        failure = ProcessControl.stop(process, action: action).map {
+            "Could not \(action.title.lowercased()) \(process.name) (PID \(process.pid)): \($0.message)"
+        }
+        coordinator.refreshProcesses()
     }
 }

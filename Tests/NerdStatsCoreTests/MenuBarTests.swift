@@ -1,4 +1,5 @@
 @testable import NerdStatsCore
+import AppKit
 import XCTest
 
 final class MenuBarPreferencesTests: XCTestCase {
@@ -128,5 +129,27 @@ final class MenuBarValuesTests: XCTestCase {
         let volumes = [volume("/Volumes/USB", total: 1, available: 1, isInternal: false), volume("/Volumes/Data", total: 1, available: 1)]
         XCTAssertEqual(MenuBarValues.startupVolume(volumes)?.mountPath, "/Volumes/Data")
         XCTAssertNil(MenuBarValues.startupVolume([]))
+    }
+}
+
+final class MenuBarSymbolTests: XCTestCase {
+    /// A symbol missing on the running macOS would leave its menu bar item without an icon.
+    func testEveryMenuBarSymbolExists() {
+        var names = [MenuBarLayout.appSymbolName]
+        for item in MenuBarItem.allCases {
+            names.append(MenuBarLayout.symbolName(for: item, values: MenuBarValues()))
+        }
+        for percent in [0, 20, 50, 70, 100] {
+            var values = MenuBarValues()
+            values.batteryPercent = percent
+            names.append(MenuBarLayout.symbolName(for: .battery, values: values))
+        }
+        var charging = MenuBarValues()
+        charging.isCharging = true
+        names.append(MenuBarLayout.symbolName(for: .battery, values: charging))
+
+        for name in names {
+            XCTAssertNotNil(NSImage(systemSymbolName: name, accessibilityDescription: nil), name)
+        }
     }
 }

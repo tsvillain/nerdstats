@@ -171,3 +171,16 @@ extension EnvironmentValues {
         set { self[OpenSettingsKey.self] = newValue }
     }
 }
+
+/// Asks the user to confirm stopping a process; returns `true` to go ahead. Injected by the
+/// app so the dialog can keep the dashboard popover open while it is shown.
+private struct ConfirmProcessStopKey: EnvironmentKey {
+    static let defaultValue: (ProcessUsage, ProcessStopAction) -> Bool = { _, _ in false }
+}
+
+extension EnvironmentValues {
+    var confirmProcessStop: (ProcessUsage, ProcessStopAction) -> Bool {
+        get { self[ConfirmProcessStopKey.self] }
+        set { self[ConfirmProcessStopKey.self] = newValue }
+    }
+}
