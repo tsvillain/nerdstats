@@ -52,8 +52,8 @@ NerdStats starts automatically when you log in; you can turn that off in Setting
 ## Privacy
 
 NerdStats runs entirely on your Mac. There's no telemetry, no analytics and no account.
-The only time it contacts the internet is when you click **Look up** to see your public IP
-address.
+It only reaches the network to look up your public IP when you click **Look up**, and to
+look up host names for live connections while Nerd mode is open.
 
 ## FAQ
 
