@@ -1,8 +1,11 @@
 import NerdStatsCore
 import SwiftUI
 
-/// The popover shown when the menu bar item is clicked.
+/// The popover shown when a menu bar item is clicked.
 struct DashboardView: View {
+    /// The clicked item's metric, whose section is placed first.
+    let focus: MenuBarItem?
+
     @EnvironmentObject private var coordinator: StatsCoordinator
     @EnvironmentObject private var settings: AppSettings
     @Environment(\.openSettingsWindow) private var openSettingsWindow
@@ -13,14 +16,9 @@ struct DashboardView: View {
             Divider()
             ScrollView {
                 VStack(spacing: 10) {
-                    SystemSection()
-                    CPUSection()
-                    GPUSection()
-                    MemorySection()
-                    DiskSection()
-                    NetworkSection()
-                    PowerSection()
-                    SensorsSection()
+                    ForEach(DashboardSection.ordered(focus: focus), id: \.self) { section in
+                        sectionView(section)
+                    }
                 }
                 .padding(12)
             }
@@ -29,9 +27,20 @@ struct DashboardView: View {
             footer
         }
         .frame(width: 400)
-        // The coordinator only samples everything while this view is on screen.
-        .onAppear { coordinator.dashboardDidAppear() }
-        .onDisappear { coordinator.dashboardDidDisappear() }
+    }
+
+    @ViewBuilder
+    private func sectionView(_ section: DashboardSection) -> some View {
+        switch section {
+        case .system: SystemSection()
+        case .processor: CPUSection()
+        case .graphics: GPUSection()
+        case .memory: MemorySection()
+        case .storage: DiskSection()
+        case .network: NetworkSection()
+        case .battery: PowerSection()
+        case .sensors: SensorsSection()
+        }
     }
 
     private var overall: StatusLevel {

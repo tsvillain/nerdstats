@@ -24,8 +24,14 @@ Requires macOS 13 Ventura or later.
 The battery section is hidden on Macs without a battery. Anything a particular Mac does not
 report is shown as unavailable instead of a guessed value.
 
-The menu bar item can show CPU usage, CPU temperature, both, memory usage, or just an
-icon. Settings also cover launch at login (on by default), the refresh interval (1, 2, 5
+In Settings you can turn on separate menu bar items for **CPU**, **GPU**, **Memory**,
+**SSD** and **Battery**, in any combination. Each has its own icon and a compact value: CPU usage
+(or CPU temperature, or both), GPU utilization, memory in use, used space on the startup disk, and battery
+charge. Clicking an item opens the dashboard with that metric's section at the top; the
+other sections follow below. The battery item hides itself on Macs without a battery, and
+when no item is shown NerdStats falls back to a plain icon so the dashboard, Settings and
+Quit stay reachable. CPU with usage and temperature is on by default. Settings also cover
+launch at login (on by default), the refresh interval (1, 2, 5
 or 10 seconds) and °C/°F.
 
 ## Build, run and test
@@ -61,8 +67,11 @@ Sources/
     Math/              Pure logic: CPU tick deltas, counter rates, battery math,
                        SMC value decoding, status thresholds, sparkline history
     Formatting/        Units and human-readable formatting
+    MenuBar/           Pure menu bar item logic: settings migration, readouts, icons,
+                       which subsystems to sample, dashboard section order
   NerdStats/           The app
-    App/               Entry point, StatsCoordinator (the sampling schedule), --dump
+    App/               Entry point, StatsCoordinator (the sampling schedule),
+                       StatusItemController (menu bar items and dashboard popover), --dump
     Settings/          Preferences, launch at login, settings window
     Views/             SwiftUI dashboard, sections and small reusable components
 Tests/NerdStatsCoreTests/
@@ -78,14 +87,16 @@ Data flows one way:
    `SystemSnapshot`.
 3. `StatsCoordinator` runs a single timer on the chosen interval and calls
    `SnapshotSampler` on a background queue. While the dashboard is closed it samples only
-   what the menu bar readout needs (for example CPU ticks and the processor temperature
-   sensors) and updates only the menu bar label. Opening the dashboard triggers a full
-   sample and keeps everything refreshing until it closes.
+   what the enabled menu bar items need (for example CPU ticks and the processor
+   temperature sensors, plus GPU, memory, disk or battery when those items are on) and updates
+   only the menu bar items. Opening the dashboard triggers a full sample and keeps
+   everything refreshing until it closes.
 4. SwiftUI views read the published snapshot and history; they never touch system APIs.
 
 Logic that can be tested without hardware (tick deltas, rates, battery parsing, SMC
-decoding, formatting, status thresholds) lives in `Math/`, `Formatting/` and small
-parser types such as `BatteryParser` and `GPUStatistics`, and is covered by the tests.
+decoding, formatting, status thresholds, menu bar item decisions) lives in `Math/`,
+`Formatting/`, `MenuBar/` and small parser types such as `BatteryParser` and
+`GPUStatistics`, and is covered by the tests.
 
 ## Where the data comes from
 
