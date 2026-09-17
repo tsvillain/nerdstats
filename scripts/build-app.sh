@@ -21,7 +21,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BINARY" "$APP/Contents/MacOS/NerdStats"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
-# CFBundleIconFile/CFBundleIconName in Info.plist point at this; without it Finder,
+# CFBundleIconFile in Info.plist points at this; without it Finder,
 # the Dock and Launchpad fall back to the generic app icon.
 cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 VERSION="${VERSION:-$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")}"
