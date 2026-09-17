@@ -7,7 +7,6 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - Every reading is optional: missing sensors/keys must render as unavailable, never crash. Intel code paths cannot be exercised on the Apple Silicon dev machine.
 - `make dump` prints what the current Mac actually reports; use it to check sensor changes. The dev environment has no screen-recording or accessibility permission, so screenshots/UI clicking do not work.
 - Beware `.map(Double.init)` on unsigned integers: it resolves to `Double(bitPattern:)`. Use `{ Double($0) }`.
-- Commit messages end with `Co-Authored-By: Claude <noreply@anthropic.com>`.
 
 ## Maintaining this file
 
