@@ -113,6 +113,8 @@ and connection grouping) lives in `Math/`,
 | Disk capacity | `URLResourceValues` volume keys | Yes |
 | Disk throughput | `IOBlockStorageDriver` → `Statistics` in the IORegistry | Undocumented registry keys |
 | Network | `NET_RT_IFLIST2` sysctl, `getifaddrs`, SystemConfiguration | Yes |
+| Connections per app | `proc_pidinfo` (`PROC_PIDLISTFDS`), `proc_pidfdinfo` sockets; `getnameinfo` for host names | Yes (libproc) |
+| Per-connection speed | `NetworkStatistics.framework`, loaded at runtime | **Private** |
 | Public IP | `https://api.ipify.org`, only when you click **Look up** | – |
 | Battery | `AppleSmartBattery` in the IORegistry, `IOPSCopyExternalPowerAdapterDetails` | Undocumented registry keys |
 | Temperatures (Apple Silicon) | `IOHIDEventSystemClient` temperature sensor services | **Private** |
