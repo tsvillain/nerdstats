@@ -105,7 +105,7 @@ typedef void (*NerdStatsTrafficVisitor)(void *_Nullable context, uint64_t source
 NerdStatsTrafficMonitor *_Nullable NerdStatsTrafficMonitorCreate(void);
 /// Stops watching and frees the monitor.
 void NerdStatsTrafficMonitorDestroy(NerdStatsTrafficMonitor *_Nonnull monitor);
-/// Refreshes all counters, waiting at most `timeoutSeconds`, then visits every known socket.
+/// Refreshes all counters and socket addresses, waiting at most `timeoutSeconds`, then visits every known socket.
 /// Returns false if the refresh did not finish in time (the visitor is still called with the
 /// last known values).
 bool NerdStatsTrafficMonitorQuery(NerdStatsTrafficMonitor *_Nonnull monitor, double timeoutSeconds,
