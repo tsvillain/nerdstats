@@ -2,6 +2,8 @@
 
 Menu bar system monitor for macOS (Intel and Apple Silicon).
 
+**Website and download:** https://tsvillain.github.io/nerdstats/ (the site's source is in [`docs/`](docs/), served by GitHub Pages).
+
 NerdStats lives in the menu bar, starts when you log in, and shows how your Mac is doing
 in real time. The dashboard gives everyone a plain-language verdict (**Normal**, **Busy**,
 **Hot**), and a **Nerd** switch reveals the raw numbers behind it.
